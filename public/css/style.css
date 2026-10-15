@@ -102,30 +102,25 @@ a:hover { color: var(--brand-dark); }
 /* Stops hidden screen-reader text from widening the page */
 .table-responsive { position: relative; }
 
-/* Academic-project notice shown at the bottom of every page */
+/* Footer with the academic-project notice, kept at the bottom of every page */
+body { min-height: 100vh; display: flex; flex-direction: column; }
+.auth-wrapper { flex: 1; min-height: 0; }
+.site-footer {
+    margin-top: auto;
+    padding: 1.25rem 0;
+    border-top: 1px solid #e3e8e6;
+    text-align: center;
+}
 .disclaimer {
-    margin: 1.5rem auto 0;
-    padding: 1rem 1.1rem;
-    border: 1px solid #e6d9a8;
-    border-radius: 0.65rem;
-    background: #fff8d9;
-    color: #302b1f;
-    font-size: 0.95rem;
-    line-height: 1.7;
-    width: 100%;
-    max-width: 1060px;
-    box-sizing: border-box;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ecdfb0;
+    border-radius: 0.5rem;
+    background: #fdf6dc;
+    color: #4a4326;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    text-align: left;
+    max-width: 960px;
+    margin: 0 auto;
 }
-
-.auth-wrapper {
-    flex-direction: column;
-}
-
-.auth-wrapper .disclaimer {
-    width: 100%;
-    max-width: 1060px;
-}
-
-.auth-card.wide ~ .disclaimer {
-    max-width: 1060px;
-}
+.site-footer-copy { margin: 0.75rem 0 0; font-size: 0.85rem; color: var(--text-muted); }

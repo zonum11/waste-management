@@ -1,6 +1,6 @@
 /* reports.js - screens to create, list and view waste reports. */
 
-const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 /* new report */
@@ -40,7 +40,7 @@ async function initNewReport() {
         // Quick browser check; the server checks again because it cannot trust the browser.
         const photo = form.elements.photo.files[0];
         if (photo && (!PHOTO_TYPES.includes(photo.type) || photo.size > MAX_PHOTO_BYTES)) {
-            showFieldErrors(form, { photo: 'Photo must be a JPEG, PNG or WebP image of 2 MB or less.' });
+            showFieldErrors(form, { photo: 'Photo must be a JPEG, PNG or WebP image of 5 MB or less.' });
             return;
         }
 

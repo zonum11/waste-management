@@ -93,7 +93,7 @@ their history on purpose. To start clean again, re-import `schema.sql` and `seed
 | Sessions | HttpOnly and SameSite cookies, new id at login, 30-minute idle timeout |
 | Roles | Checked on the server for every request. A resident asking for someone else's report gets "not found" |
 | Login guessing | 5 wrong passwords for one email and device lock it for 15 minutes (counters are small files in `storage/login-attempts`) |
-| Input size | JSON bodies over 64 KB and photos over 2 MB are refused; bad text encoding is refused |
+| Input size | JSON bodies over 64 KB and photos over 5 MB are refused; bad text encoding is refused |
 | Photos | Checked by their real content (JPG, PNG, WebP), renamed randomly, served only through the API after a permission check |
 | Folders | `.htaccess` files deny web access to `api/config`, `controllers`, `models`, `helpers`, `database`, `tests`, `docs`, `storage`, `tools` and `uploads` |
 | Errors | Visitors see a generic message; details go to the PHP error log |
@@ -102,7 +102,7 @@ their history on purpose. To start clean again, re-import `schema.sql` and `seed
 HSTS and marks cookies `Secure` automatically), and change the admin password.
 
 ## Academic disclaimer
-Every page shows a notice that the system is a demonstration made for an SIA subject project and is not an official barangay service. The text is in the `<aside class="disclaimer">` block near the end of each `public/*.html` page; edit it there if the wording changes.
+Every page has a footer with a notice that the system is a demonstration made for an SIA subject project and is not an official barangay service. The text is in the `<footer class="site-footer">` block at the end of each `public/*.html` page; edit it there if the wording changes.
 
 ## Troubleshooting
 | Problem | Fix |

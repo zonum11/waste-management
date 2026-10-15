@@ -2,7 +2,7 @@
 // Handles the optional photo on a waste report, with strict upload checks.
 class PhotoUpload
 {
-    private const MAX_BYTES = 2 * 1024 * 1024;
+    private const MAX_BYTES = 5 * 1024 * 1024;
     private const TYPES = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
     private const NAME_PATTERN = '/^[a-f0-9]{32}\.(jpg|png|webp)$/';
 
@@ -21,13 +21,13 @@ class PhotoUpload
             return 'Upload a single photo.';
         }
         if ($file['error'] === UPLOAD_ERR_INI_SIZE || $file['error'] === UPLOAD_ERR_FORM_SIZE) {
-            return 'Photo must be 2 MB or smaller.';
+            return 'Photo must be 5 MB or smaller.';
         }
         if ($file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
             return 'The photo could not be uploaded. Please try again.';
         }
         if ($file['size'] > self::MAX_BYTES) {
-            return 'Photo must be 2 MB or smaller.';
+            return 'Photo must be 5 MB or smaller.';
         }
 
         // Check the real file contents, not the name or type the browser claims.

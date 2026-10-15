@@ -13,8 +13,8 @@ $fakeImage = "$tmp/test_fake_" . getmypid() . '.jpg';   // text pretending to be
 file_put_contents($fakeImage, '<?php echo "not an image"; ?>');
 $gif = "$tmp/test_gif_" . getmypid() . '.gif';           // valid image, but a type we do not accept
 file_put_contents($gif, base64_decode('R0lGODlhAQABAAAAACw='));
-$big = "$tmp/test_big_" . getmypid() . '.png';           // over the 2 MB limit
-file_put_contents($big, file_get_contents($png) . str_repeat('0', 3 * 1024 * 1024));
+$big = "$tmp/test_big_" . getmypid() . '.png';           // over the 5 MB limit
+file_put_contents($big, file_get_contents($png) . str_repeat('0', 6 * 1024 * 1024));
 
 function makeResident(string $baseUrl, string $label): Client
 {
@@ -65,7 +65,7 @@ check('a PHP/text file renamed .jpg is rejected', $s === 422 && isset($j['errors
 [$s, $j] = $alice->postForm('reports', $valid, $gif, 'x.gif');
 check('a GIF (type not allowed) is rejected', $s === 422 && isset($j['errors']['photo']));
 [$s, $j] = $alice->postForm('reports', $valid, $big, 'big.png');
-check('a photo over 2 MB is rejected', in_array($s, [413, 422], true));
+check('a photo over 5 MB is rejected', in_array($s, [413, 422], true));
 
 echo "\nSubmitting reports\n";
 [$s, $j] = $alice->postForm('reports', $valid + ['waste_type_ids' => [$types[0], $types[1]]]);
