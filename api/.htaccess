@@ -1,0 +1,10 @@
+# Apache rules for the API: turn on URL rewriting.
+RewriteEngine On
+
+# Block direct web access to internal code and settings.
+RewriteRule ^(config|controllers|models|helpers)/ - [F,L]
+
+# Send every other URL to index.php.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]

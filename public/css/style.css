@@ -1,0 +1,131 @@
+/* Custom styles on top of Bootstrap 5. */
+:root {
+    --brand: #2f6f4e;
+    --brand-dark: #245a3e;
+    --surface: #f6f8f7;
+    --text-muted: #5b6770;
+}
+
+body {
+    background: var(--surface);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1f2933;
+}
+
+/* Brand button and links */
+.btn-brand {
+    --bs-btn-bg: var(--brand);
+    --bs-btn-border-color: var(--brand);
+    --bs-btn-color: #fff;
+    --bs-btn-hover-bg: var(--brand-dark);
+    --bs-btn-hover-border-color: var(--brand-dark);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: var(--brand-dark);
+    --bs-btn-active-border-color: var(--brand-dark);
+    --bs-btn-active-color: #fff;
+    --bs-btn-disabled-bg: var(--brand);
+    --bs-btn-disabled-border-color: var(--brand);
+}
+a { color: var(--brand); }
+a:hover { color: var(--brand-dark); }
+
+/* Keyboard focus outline */
+.form-control:focus,
+.btn:focus-visible {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 0.2rem rgba(47, 111, 78, 0.25);
+}
+
+/* Login and registration pages */
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem 1rem;
+}
+.auth-card {
+    width: 100%;
+    max-width: 440px;
+    border: 1px solid #e3e8e6;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.auth-card.wide { max-width: 560px; }
+.brand-mark {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--brand);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+/* Top bar on dashboard pages */
+.app-navbar {
+    background: #fff;
+    border-bottom: 1px solid #e3e8e6;
+}
+.app-navbar .brand-mark { width: 36px; height: 36px; font-size: 1.1rem; border-radius: 9px; }
+
+.text-muted-soft { color: var(--text-muted); }
+
+/* Navigation links under the top bar */
+.nav-underline {
+    --bs-nav-underline-link-active-color: var(--brand);
+    --bs-nav-link-color: #3e4c59;
+    --bs-nav-link-hover-color: var(--brand-dark);
+}
+.nav-underline .nav-link.active { border-bottom-color: var(--brand); }
+
+/* Long user text */
+.pre-wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.report-photo {
+    max-width: 100%;
+    max-height: 360px;
+    border-radius: 0.5rem;
+    border: 1px solid #e3e8e6;
+}
+
+/* Dashboard summary tiles */
+.stat-tile {
+    border: 1px solid #e3e8e6;
+    color: inherit;
+}
+.stat-tile:hover { border-color: var(--brand); color: inherit; }
+.stat-number { font-size: 2rem; font-weight: 600; line-height: 1.2; color: #1f2933; }
+
+/* Stops hidden screen-reader text from widening the page */
+.table-responsive { position: relative; }
+
+/* Academic-project notice shown at the bottom of every page */
+.disclaimer {
+    margin: 1.5rem auto 0;
+    padding: 1rem 1.1rem;
+    border: 1px solid #e6d9a8;
+    border-radius: 0.65rem;
+    background: #fff8d9;
+    color: #302b1f;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    width: 100%;
+    max-width: 1060px;
+    box-sizing: border-box;
+}
+
+.auth-wrapper {
+    flex-direction: column;
+}
+
+.auth-wrapper .disclaimer {
+    width: 100%;
+    max-width: 1060px;
+}
+
+.auth-card.wide ~ .disclaimer {
+    max-width: 1060px;
+}

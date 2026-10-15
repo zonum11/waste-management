@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resident Dashboard - Barangay Waste Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body data-page="resident-schedule">
+<header id="app-nav"></header>
+
+<main id="page-content" class="container py-4 d-none">
+    <h1 class="h4 mb-1">Resident Dashboard</h1>
+    <p class="text-muted-soft mb-4">When is my garbage collected? Check the schedule below, or report a problem from the menu.</p>
+
+    <section class="card" aria-labelledby="schedule-heading">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                <h2 class="h5 mb-0" id="schedule-heading">
+                    <i class="bi bi-calendar-week me-1" aria-hidden="true"></i> Collection schedule
+                </h2>
+                <div>
+                    <label for="zone-filter" class="form-label small text-muted-soft mb-1">Zone</label>
+                    <select id="zone-filter" class="form-select form-select-sm">
+                        <option value="">All zones</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="schedule-alert" class="alert d-none" role="alert" aria-live="polite"></div>
+
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Day</th>
+                            <th scope="col">Time</th>
+                            <th scope="col">Zones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedule-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <aside class="disclaimer" role="note">
+        <strong>Disclaimer:</strong> This website is created for demonstration and academic purposes only as part of an SIA subject project. It is not a real company, official barangay service, registered business, or commercial website. No claims are made regarding actual operations, legal standing, or real-world services.
+    </aside>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/schedules.js"></script>
+<script src="js/pages.js"></script>
+</body>
+</html>

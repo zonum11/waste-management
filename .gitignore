@@ -1,0 +1,18 @@
+# Secrets and local settings
+api/config/config.php
+
+# User-uploaded photos (keep the folder, not the files)
+uploads/*
+!uploads/.gitkeep
+!uploads/.htaccess
+
+# Login-attempt counters (keep the folder, not the files)
+storage/*
+!storage/.gitkeep
+!storage/.htaccess
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

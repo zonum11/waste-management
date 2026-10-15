@@ -1,0 +1,10 @@
+# Blocks all web access here; PHP code and the command line still work.
+# Apache 2.4 and newer:
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+# Older Apache 2.2:
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>

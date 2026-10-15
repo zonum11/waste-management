@@ -1,0 +1,2 @@
+# No direct access; the API serves photos after a permission check.
+Require all denied

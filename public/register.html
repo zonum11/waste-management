@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Register - Barangay Waste Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body data-page="register">
+<main class="auth-wrapper">
+    <div class="card auth-card wide">
+        <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+                <span class="brand-mark mb-3" aria-hidden="true"><i class="bi bi-recycle"></i></span>
+                <h1 class="h4 mb-1">Create an account</h1>
+                <p class="text-muted-soft mb-0">For barangay residents</p>
+            </div>
+
+            <div id="form-alert" class="alert d-none" role="alert" aria-live="polite"></div>
+
+            <form id="register-form" novalidate>
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6">
+                        <label for="fname" class="form-label">First name</label>
+                        <input type="text" class="form-control" id="fname" name="fname"
+                               maxlength="50" autocomplete="given-name" required autofocus>
+                        <div class="invalid-feedback" data-error-for="fname"></div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label for="lname" class="form-label">Last name</label>
+                        <input type="text" class="form-control" id="lname" name="lname"
+                               maxlength="50" autocomplete="family-name" required>
+                        <div class="invalid-feedback" data-error-for="lname"></div>
+                    </div>
+                    <div class="col-12">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email"
+                               maxlength="100" autocomplete="email" required>
+                        <div class="invalid-feedback" data-error-for="email"></div>
+                    </div>
+                    <div class="col-12">
+                        <label for="phone_number" class="form-label">
+                            Phone number <span class="text-muted-soft">(optional)</span>
+                        </label>
+                        <input type="tel" class="form-control" id="phone_number" name="phone_number"
+                               maxlength="20" autocomplete="tel">
+                        <div class="invalid-feedback" data-error-for="phone_number"></div>
+                    </div>
+                    <div class="col-12">
+                        <label for="address" class="form-label">Address</label>
+                        <input type="text" class="form-control" id="address" name="address"
+                               maxlength="255" autocomplete="street-address" required>
+                        <div class="invalid-feedback" data-error-for="address"></div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               autocomplete="new-password" aria-describedby="password-help" required>
+                        <div class="invalid-feedback" data-error-for="password"></div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label for="password_confirm" class="form-label">Confirm password</label>
+                        <input type="password" class="form-control" id="password_confirm" name="password_confirm"
+                               autocomplete="new-password" required>
+                        <div class="invalid-feedback" data-error-for="password_confirm"></div>
+                    </div>
+                    <div class="col-12">
+                        <div id="password-help" class="form-text">
+                            At least 8 characters, with at least one letter and one number.
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" id="submit-btn" class="btn btn-brand w-100 mt-4">Create account</button>
+            </form>
+
+            <p class="text-center text-muted-soft mt-4 mb-0">
+                Already registered? <a href="login.html">Log in</a>
+            </p>
+        </div>
+    </div>
+
+    <aside class="disclaimer" role="note">
+        <strong>Disclaimer:</strong> This website is created for demonstration and academic purposes only as part of an SIA subject project. It is not a real company, official barangay service, registered business, or commercial website. No claims are made regarding actual operations, legal standing, or real-world services.
+    </aside>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/pages.js"></script>
+</body>
+</html>
