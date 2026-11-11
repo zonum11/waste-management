@@ -20,11 +20,25 @@ function formatTime(hhmm) {
     return `${hour % 12 === 0 ? 12 : hour % 12}:${minute} ${suffix}`;
 }
 
+// Full address text of each zone ("Zone 1" becomes "Barangay Pogi Zone 1, Sitio Merete"), loaded once from the public zone list.
+let zoneAddresses = null;
+async function loadZoneNames() {
+    if (zoneAddresses) return;
+    zoneAddresses = {};
+    try {
+        const data = await apiRequest('zones');
+        data.zones.forEach((zone) => { zoneAddresses[zone.zone_name] = zone.address; });
+    } catch (error) { /* keep the short zone names */ }
+}
+function fullZoneName(name) {
+    return (zoneAddresses && zoneAddresses[name]) || name;
+}
+
 // Small labels for each zone.
 function zoneBadges(zones) {
     const wrap = el('div', { class: 'd-flex flex-wrap gap-1' });
     zones.forEach((zone) => {
-        wrap.appendChild(el('span', { class: 'badge text-bg-light border fw-normal', text: zone.zone_name }));
+        wrap.appendChild(el('span', { class: 'badge text-bg-light border fw-normal', text: fullZoneName(zone.zone_name) }));
     });
     return wrap;
 }
@@ -69,58 +83,83 @@ function formatDateTime(value) {
     return `${months[Number(match[2]) - 1]} ${Number(match[3])}, ${match[1]}, ${formatTime(`${match[4]}:${match[5]}`)}`;
 }
 
-const NAV_LINKS = {
-    resident: [
-        { key: 'schedule', href: 'resident.html', icon: 'bi-calendar-week', label: 'Schedule' },
-        { key: 'new-report', href: 'report-new.html', icon: 'bi-plus-circle', label: 'New report' },
-        { key: 'my-reports', href: 'my-reports.html', icon: 'bi-card-list', label: 'My reports' },
-    ],
-    admin: [
-        { key: 'dashboard', href: 'admin.html', icon: 'bi-speedometer2', label: 'Dashboard' },
-        { key: 'schedules', href: 'admin-schedules.html', icon: 'bi-calendar-week', label: 'Schedules' },
-        { key: 'reports', href: 'admin-reports.html', icon: 'bi-card-list', label: 'Reports' },
-    ],
-};
+// "Zone 2 • Sitio Munoz" from the saved address ("Barangay Pogi Zone 2, Sitio Munoz"); falls back to the zone name.
+function zoneLabel(user) {
+    const match = /(Zone\s*\d+),\s*(.+)$/.exec(user.address || '');
+    if (match) return `${match[1]} \u2022 ${match[2]}`;
+    return user.zone ? user.zone.zone_name : '';
+}
 
-// Builds the top bar; activeKey marks the current page's link.
-function renderNavbar(user, activeKey) {
-    const brand = el('span', { class: 'navbar-brand d-flex align-items-center gap-2 mb-0' }, [
-        el('span', { class: 'brand-mark', attrs: { 'aria-hidden': 'true' } }, [el('i', { class: 'bi bi-recycle' })]),
-        el('span', { text: 'Waste Management' }),
+// "Barangay Pogi" from the saved address, or null when the account has none (admins).
+function barangayOf(user) {
+    const match = /^(.*?)\s+Zone\s*\d+/.exec(user.address || '');
+    return match ? match[1] : null;
+}
+
+// Builds the top bar: logo and barangay name on the left, the user's menu (Profile, Log out) on the right.
+function renderNavbar(user) {
+    const initial = (user.fname || '?').charAt(0).toUpperCase();
+    const barangay = barangayOf(user);
+
+    const brandName = el('span', { class: 'app-brand-name', text: barangay || 'Barangay', attrs: { id: 'brand-name' } });
+    const brand = el('a', { class: 'app-brand', attrs: { href: dashboardFor(user.role), 'aria-label': 'Home' } }, [
+        el('i', { class: 'bi bi-recycle app-brand-mark', attrs: { 'aria-hidden': 'true' } }),
+        el('span', { class: 'app-brand-text' }, [
+            brandName,
+            el('span', { class: 'app-brand-sub', text: 'WASTE MANAGEMENT SYSTEM' }),
+        ]),
     ]);
-    if (user.role === 'admin') {
-        brand.appendChild(el('span', { class: 'badge text-bg-secondary ms-1', text: 'Admin' }));
+    // Admins have no address, so the barangay name comes from the public zone list.
+    if (!barangay) {
+        apiRequest('zones').then((data) => {
+            if (data.zones.length > 0) brandName.textContent = data.zones[0].barangay_name;
+        }).catch(() => { /* keep the default name */ });
     }
 
-    const userName = el('span', { class: 'text-muted-soft d-none d-sm-inline' }, [
-        el('i', { class: 'bi bi-person-circle', attrs: { 'aria-hidden': 'true' } }),
-        document.createTextNode(' '),
-        el('span', { text: `${user.fname} ${user.lname}`, attrs: { id: 'user-name' } }),
+    const toggle = el('button', { class: 'user-toggle', attrs: {
+        type: 'button', 'data-bs-toggle': 'dropdown', 'aria-expanded': 'false', 'aria-label': 'Account menu', id: 'user-menu-btn',
+    } }, [
+        el('span', { class: 'user-avatar', text: initial, attrs: { id: 'user-avatar', 'aria-hidden': 'true' } }),
+        el('span', { class: 'user-meta' }, [
+            el('strong', { text: `${user.fname} ${user.lname}`, attrs: { id: 'user-name' } }),
+            el('small', { text: user.role === 'admin' ? 'Administrator' : zoneLabel(user), attrs: { id: 'user-zone' } }),
+        ]),
     ]);
-    const logoutButton = el('button', { class: 'btn btn-outline-secondary btn-sm', attrs: { type: 'button', id: 'logout-btn' } }, [
-        el('i', { class: 'bi bi-box-arrow-right', attrs: { 'aria-hidden': 'true' } }),
-        document.createTextNode(' Log out'),
+
+    // "Profile" opens the pop-up when this page has one; elsewhere it is a normal link to the dashboard.
+    const items = [];
+    if (user.role === 'resident') {
+        const profileLink = el('a', { class: 'dropdown-item', attrs: { href: 'resident.html#profile' } }, [
+            el('i', { class: 'bi bi-person-circle me-2', attrs: { 'aria-hidden': 'true' } }),
+            document.createTextNode('Profile'),
+        ]);
+        if (document.getElementById('profile-modal')) {
+            profileLink.setAttribute('data-bs-toggle', 'modal');
+            profileLink.setAttribute('data-bs-target', '#profile-modal');
+        }
+        items.push(el('li', {}, [profileLink]));
+    }
+    const logoutButton = el('button', { class: 'dropdown-item', attrs: { type: 'button', id: 'logout-btn' } }, [
+        el('i', { class: 'bi bi-box-arrow-right me-2', attrs: { 'aria-hidden': 'true' } }),
+        document.createTextNode('Log out'),
     ]);
     logoutButton.addEventListener('click', logout);
+    items.push(el('li', {}, [logoutButton]));
 
-    const links = el('ul', { class: 'nav nav-underline flex-nowrap overflow-auto' });
-    NAV_LINKS[user.role].forEach((link) => {
-        const anchor = el('a', { class: `nav-link text-nowrap${link.key === activeKey ? ' active' : ''}`, attrs: { href: link.href } }, [
-            el('i', { class: `bi ${link.icon} me-1`, attrs: { 'aria-hidden': 'true' } }),
-            document.createTextNode(link.label),
-        ]);
-        if (link.key === activeKey) anchor.setAttribute('aria-current', 'page');
-        links.appendChild(el('li', { class: 'nav-item' }, [anchor]));
-    });
-
-    const nav = el('nav', { class: 'app-navbar', attrs: { 'aria-label': 'Main' } }, [
-        el('div', { class: 'container d-flex justify-content-between align-items-center py-2' }, [
-            brand,
-            el('div', { class: 'd-flex align-items-center gap-3' }, [userName, logoutButton]),
-        ]),
-        el('div', { class: 'container' }, [links]),
+    const menu = el('div', { class: 'dropdown user-menu' }, [
+        toggle,
+        el('ul', { class: 'dropdown-menu dropdown-menu-md-end' }, items),
     ]);
-    document.getElementById('app-nav').replaceChildren(nav);
+
+    const header = el('nav', { class: 'app-header', attrs: { 'aria-label': 'Main' } }, [
+        el('div', { class: 'container app-header-inner' }, [
+            brand,
+            el('i', { class: 'bi bi-recycle app-mobile-mark', attrs: { 'aria-hidden': 'true' } }),
+            menu,
+        ]),
+    ]);
+
+    document.getElementById('app-nav').replaceChildren(header);
 }
 
 // Previous / Next buttons; onPage(newPage) runs when one is clicked.

@@ -17,7 +17,10 @@ function getConnection(): PDO
 
     try {
         $pdo = new PDO($dsn, $db['user'] ?? null, $db['password'] ?? null, [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,            PDO::ATTR_EMULATE_PREPARES   => false,        ]);
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ]);
     } catch (PDOException $e) {
         // Log the real reason, but give callers a safe message.
         error_log('Database connection failed: ' . $e->getMessage());

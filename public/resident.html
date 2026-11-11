@@ -6,46 +6,57 @@
     <title>Resident Dashboard - Barangay Waste Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/montserrat@5.0.8/400.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/montserrat@5.0.8/600.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/montserrat@5.0.8/700.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/lato@5.0.8/400.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/lato@5.0.8/700.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
 </head>
-<body data-page="resident-schedule">
+<body data-page="resident-dashboard">
 <header id="app-nav"></header>
 
-<main id="page-content" class="container py-4 d-none">
-    <h1 class="h4 mb-1">Resident Dashboard</h1>
-    <p class="text-muted-soft mb-4">When is my garbage collected? Check the schedule below, or report a problem from the menu.</p>
+<main id="page-content" class="container page-main d-none">
+    <div class="greeting">
+        <p class="greeting-date" id="today-date"></p>
+        <h1 class="greeting-hello">Welcome, <span id="welcome-name"></span></h1>
+    </div>
 
-    <section class="card" aria-labelledby="schedule-heading">
-        <div class="card-body">
-            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
-                <h2 class="h5 mb-0" id="schedule-heading">
-                    <i class="bi bi-calendar-week me-1" aria-hidden="true"></i> Collection schedule
-                </h2>
-                <div>
-                    <label for="zone-filter" class="form-label small text-muted-soft mb-1">Zone</label>
-                    <select id="zone-filter" class="form-select form-select-sm">
-                        <option value="">All zones</option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="schedule-alert" class="alert d-none" role="alert" aria-live="polite"></div>
-
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">Day</th>
-                            <th scope="col">Time</th>
-                            <th scope="col">Zones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="schedule-body"></tbody>
-                </table>
-            </div>
+    <section class="panel-card pickup-card" id="schedule" aria-labelledby="pickup-heading">
+        <div>
+            <p class="eyebrow" id="pickup-heading">Next Pickup</p>
+            <p class="pickup-day" id="pickup-day">Loading...</p>
+            <p class="pickup-zone" id="zone-name"></p>
+        </div>
+        <div>
+            <p class="eyebrow" id="weekly-heading">Weekly Schedule</p>
+            <ul class="weekly-list" id="weekly-list" aria-labelledby="weekly-heading"></ul>
         </div>
     </section>
+    <div id="schedule-alert" class="alert d-none" role="alert" aria-live="polite"></div>
 
+    <section class="panel-card" id="my-reports" aria-labelledby="my-reports-heading">
+        <div class="reports-head">
+            <div>
+                <p class="eyebrow" id="my-reports-heading">My Reports</p>
+                <h2 class="reports-title">Submit a Waste Report</h2>
+                <p class="reports-sub">Notify the barangay of missed trash or community hazards</p>
+            </div>
+            <div class="reports-actions">
+                <div>
+                    <label for="status-filter" class="visually-hidden">Filter reports by status</label>
+                    <select id="status-filter" class="form-select">
+                        <option value="">All statuses</option>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-brand" id="new-report" data-bs-toggle="modal" data-bs-target="#report-modal">Submit a Report</button>
+            </div>
+        </div>
+
+        <div id="report-alert" class="alert d-none mt-4 mb-0" role="alert" aria-live="polite"></div>
+        <div class="report-list" id="report-body"></div>
+        <div id="pagination"></div>
+    </section>
 </main>
 
 <footer class="site-footer">
@@ -53,14 +64,146 @@
         <aside class="disclaimer" role="note">
             <strong>Disclaimer:</strong> This website is created for demonstration and academic purposes only as part of an SIA subject project. It is not a real company, official barangay service, registered business, or commercial website. No claims are made regarding actual operations, legal standing, or real-world services.
         </aside>
-        <p class="site-footer-copy">&copy; 2026 Barangay Waste Management System</p>
     </div>
 </footer>
 
+<div class="modal fade" id="report-modal" tabindex="-1" aria-labelledby="report-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <form class="modal-content" id="report-form" novalidate>
+            <div class="sheet-handle" aria-hidden="true"></div>
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title" id="report-modal-title">Waste Report</h2>
+                    <p class="modal-sub">Notify the barangay of missed trash or community hazards</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="form-alert" class="alert d-none" role="alert" aria-live="polite"></div>
+                <div class="mb-3">
+                    <label for="zone_id" class="form-label">Incident Location</label>
+                    <select class="form-select" id="zone_id" name="zone_id" required>
+                        <option value="">Select a zone</option>
+                    </select>
+                    <div class="invalid-feedback" data-error-for="zone_id"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="issue_type" class="form-label">Type of Issue</label>
+                    <select class="form-select" id="issue_type" name="issue_type" required>
+                        <option value="">Please select one</option>
+                    </select>
+                    <div class="invalid-feedback" data-error-for="issue_type"></div>
+                </div>
+                <fieldset class="mb-3">
+                    <legend class="form-label fs-6">
+                        Observed Material Streams <span class="fw-normal">(Select all that apply)</span>
+                    </legend>
+                    <div id="waste-type-checkboxes" class="pill-group"></div>
+                    <div class="invalid-feedback" data-error-for="waste_type_ids"></div>
+                </fieldset>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-baseline">
+                        <label for="issue_description" class="form-label">Detailed Observation &amp; Landmarks</label>
+                        <span class="small text-muted-soft" id="description-count" aria-hidden="true">0/1000</span>
+                    </div>
+                    <textarea class="form-control" id="issue_description" name="issue_description" placeholder="Add your description here"
+                              rows="4" minlength="10" maxlength="1000" aria-describedby="description-help" required></textarea>
+                    <div id="description-help" class="form-text">Describe what happened and where (10 to 1000 characters).</div>
+                    <div class="invalid-feedback" data-error-for="issue_description"></div>
+                </div>
+                <div class="mb-1">
+                    <span class="form-label d-block" id="photo-label">Photos <span class="fw-normal">(required, 1 or 2 photos)</span></span>
+                    <label class="upload-box" id="upload-box" for="photo">
+                        <i class="bi bi-image upload-icon" aria-hidden="true"></i>
+                        <span>
+                            <span class="upload-title d-block" id="upload-title">Upload image here</span>
+                            <span class="upload-hint d-block" id="photo-help">Tap to take photo or select image<br>JPEG, PNG or WebP, up to 2 photos, 15MB in total</span>
+                        </span>
+                        <input type="file" id="photo" name="photos" multiple accept="image/jpeg,image/png,image/webp" aria-labelledby="photo-label" aria-describedby="photo-help">
+                    </label>
+                    <ul class="photo-files list-unstyled" id="photo-files" aria-live="polite"></ul>
+                    <div class="invalid-feedback" data-error-for="photos"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" id="submit-btn" class="btn btn-brand">Submit Report</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="profile-modal" tabindex="-1" aria-labelledby="profile-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form class="modal-content" id="profile-form" novalidate>
+            <div class="sheet-handle" aria-hidden="true"></div>
+            <div class="modal-header">
+                <h2 class="modal-title" id="profile-modal-title">My Profile</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="profile-alert" class="alert d-none" role="alert" aria-live="polite"></div>
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label for="profile-fname" class="form-label">First name</label>
+                        <input type="text" class="form-control" id="profile-fname" name="fname" maxlength="50" autocomplete="given-name" required>
+                        <div class="invalid-feedback" data-error-for="fname"></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="profile-lname" class="form-label">Last name</label>
+                        <input type="text" class="form-control" id="profile-lname" name="lname" maxlength="50" autocomplete="family-name" required>
+                        <div class="invalid-feedback" data-error-for="lname"></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="profile-email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="profile-email" name="email" maxlength="100" autocomplete="email" required>
+                        <div class="invalid-feedback" data-error-for="email"></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="profile-phone" class="form-label">Phone number <span class="text-muted-soft">(optional)</span></label>
+                        <input type="tel" class="form-control" id="profile-phone" name="phone_number" maxlength="20" autocomplete="tel">
+                        <div class="invalid-feedback" data-error-for="phone_number"></div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h3 class="h6 admin-section-title">Change password <span class="text-muted-soft fw-normal">(optional)</span></h3>
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label for="profile-new-password" class="form-label">New password</label>
+                        <input type="password" class="form-control" id="profile-new-password" name="new_password"
+                               autocomplete="new-password" aria-describedby="profile-new-password-help">
+                        <div id="profile-new-password-help" class="form-text">At least 8 characters, with a letter and a number. Leave empty to keep your password.</div>
+                        <div class="invalid-feedback" data-error-for="new_password"></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="profile-confirm-password" class="form-label">Confirm new password</label>
+                        <input type="password" class="form-control" id="profile-confirm-password" name="confirm_password" autocomplete="new-password">
+                        <div class="invalid-feedback" data-error-for="confirm_password"></div>
+                    </div>
+                    <div class="col-12 col-md-6 d-none" id="password-row">
+                        <label for="profile-password" class="form-label">Current password</label>
+                        <input type="password" class="form-control" id="profile-password" name="current_password"
+                               autocomplete="current-password" aria-describedby="profile-password-help">
+                        <div id="profile-password-help" class="form-text">Needed to change your email or password.</div>
+                        <div class="invalid-feedback" data-error-for="current_password"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" id="profile-save-btn" class="btn btn-brand">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/api.js"></script>
-<script src="js/auth.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/schedules.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/profile.js"></script>
 <script src="js/pages.js"></script>
 </body>
 </html>

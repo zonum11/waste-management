@@ -29,7 +29,7 @@ check('login page: Content-Security-Policy forbids inline scripts', hasHeader($h
     && !hasHeader($headers, 'Content-Security-Policy', 'unsafe-inline'));
 [$status, $headers] = rawHttp("$site/public/js/api.js");
 check('JavaScript files are served too', $status === 200);
-[$status] = rawHttp("$site/api/zones");
+[$status] = rawHttp("$site/api/schedules");
 check('the API is reachable through the .htaccess rewrite (401 = "log in first")', $status === 401);
 
 finishTests();

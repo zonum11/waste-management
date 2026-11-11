@@ -9,7 +9,7 @@ $email = 'test_dash_' . time() . rand(100, 999) . '@example.com';
 $resident = new Client($baseUrl);
 $resident->fetchCsrf();
 $resident->request('POST', 'auth/register', [
-    'fname' => 'Test', 'lname' => 'Dash', 'email' => $email, 'address' => '1 Test St.', 'password' => 'Secret123',
+    'fname' => 'Test', 'lname' => 'Dash', 'email' => $email, 'address' => '1 Test St.', 'zone_id' => 1, 'password' => 'Secret123',
 ]);
 $resident->login($email, 'Secret123');
 
@@ -36,9 +36,9 @@ check('active schedule count matches the schedule list', $j['data']['active_sche
 check('resident count includes the test resident', $j['data']['residents'] >= 1);
 
 $base = ['issue_type' => 'missed_collection', 'issue_description' => 'Dashboard test report.'];
-[$s, $r] = $resident->postForm('reports', $base + ['zone_id' => 1]);
+[$s, $r] = $resident->postForm('reports', $base + ['zone_id' => 1], tinyPng());
 $id1 = $r['data']['report']['report_id'] ?? 0;
-[, $r] = $resident->postForm('reports', $base + ['zone_id' => 2, 'issue_description' => 'Second dashboard test report.']);
+[, $r] = $resident->postForm('reports', $base + ['zone_id' => 2, 'issue_description' => 'Second dashboard test report.'], tinyPng());
 $id2 = $r['data']['report']['report_id'] ?? 0;
 
 [, $j] = $admin->request('GET', 'dashboard');

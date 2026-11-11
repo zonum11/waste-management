@@ -46,8 +46,11 @@ class Client
         return [$status, json_decode((string) $raw, true)];
     }
 
-    /** Sends a multipart form, optionally with a "photo" file. Returns [status, json]. */
-    public function postForm(string $path, array $fields, ?string $photoPath = null, string $photoName = 'photo.png'): array
+    /**
+     * Sends a multipart form, optionally with photos. $photos is one file path or a list of paths
+     * (sent as "photos[]"); $photoName is the file name sent for the first one. Returns [status, json].
+     */
+    public function postForm(string $path, array $fields, string|array|null $photos = null, string $photoName = 'photo.png'): array
     {
         $post = [];
         foreach ($fields as $name => $value) {
@@ -59,8 +62,8 @@ class Client
                 $post[$name] = $value;
             }
         }
-        if ($photoPath !== null) {
-            $post['photo'] = new CURLFile($photoPath, mime_content_type($photoPath) ?: 'application/octet-stream', $photoName);
+        foreach (array_values((array) $photos) as $i => $photoPath) {
+            $post["photos[$i]"] = new CURLFile($photoPath, mime_content_type($photoPath) ?: 'application/octet-stream', $i === 0 ? $photoName : "photo$i.png");
         }
 
         // No Content-Type here: curl adds it, including the multipart boundary.
@@ -212,4 +215,18 @@ function hasHeader(string $headerText, string $name, string $valueContains = '')
         }
     }
     return false;
+}
+
+/** Path of a tiny valid PNG in the temp folder (made once per run, removed at the end). */
+function tinyPng(): string
+{
+    static $path = null;
+    if ($path === null) {
+        $path = sys_get_temp_dir() . '/test_tiny_' . getmypid() . '.png';
+        file_put_contents($path, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='));
+        register_shutdown_function(static function () use ($path): void {
+            @unlink($path);
+        });
+    }
+    return $path;
 }

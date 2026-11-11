@@ -8,7 +8,7 @@ require_once __DIR__ . '/TestHelpers.php';
 $email = 'test_' . time() . '@example.com';
 $good  = [
     'fname' => 'Juan', 'lname' => "Dela Cruz", 'email' => $email,
-    'phone_number' => '09171234567', 'address' => '123 Sample St.', 'password' => 'Secret123',
+    'phone_number' => '09171234567', 'address' => '123 Sample St.', 'zone_id' => 1, 'password' => 'Secret123',
 ];
 
 echo "Auth API tests against $baseUrl\n";
@@ -31,7 +31,9 @@ check('CSRF token is issued', is_string($c->csrf) && strlen($c->csrf) === 64);
 echo "\nRegistration\n";
 [$s, $j] = $c->request('POST', 'auth/register', ['fname' => '', 'email' => 'bad', 'password' => 'short']);
 check('invalid input returns 422', $s === 422);
-check('errors name the bad fields', isset($j['errors']['fname'], $j['errors']['email'], $j['errors']['password'], $j['errors']['address']));
+check('errors name the bad fields', isset($j['errors']['fname'], $j['errors']['email'], $j['errors']['password'], $j['errors']['zone_id']));
+[$s, $j] = $c->request('POST', 'auth/register', ['zone_id' => 99999] + $good);
+check('unknown zone is rejected at registration', $s === 422 && isset($j['errors']['zone_id']));
 
 [$s] = $c->request('POST', 'auth/register', $good + ['role' => 'admin']);
 check('valid registration returns 201 (even with a sneaky role field)', $s === 201);

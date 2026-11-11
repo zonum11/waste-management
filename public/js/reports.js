@@ -1,29 +1,64 @@
 /* reports.js - screens to create, list and view waste reports. */
 
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_PHOTOS = 2;
+const MAX_PHOTO_TOTAL_BYTES = 15 * 1024 * 1024;   // both photos together
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+// 1536000 -> "1.5 MB"
+function formatFileSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Large photo preview in a Bootstrap modal. Built once, then reused.
+// It closes with the X button, a click outside the picture, or the Esc key.
+function openPhotoViewer(src, alt, details) {
+    let modal = document.getElementById('photo-modal');
+    if (!modal) {
+        modal = el('div', { class: 'modal fade photo-modal', attrs: { id: 'photo-modal', tabindex: '-1', 'aria-label': 'Photo preview', 'aria-hidden': 'true' } }, [
+            el('div', { class: 'modal-dialog modal-dialog-centered' }, [
+                el('div', { class: 'modal-content' }, [
+                    el('button', { class: 'btn-close btn-close-white photo-modal-close', attrs: { type: 'button', 'data-bs-dismiss': 'modal', 'aria-label': 'Close' } }),
+                    el('img', { class: 'photo-modal-img', attrs: { id: 'photo-modal-img', src: '', alt: '' } }),
+                    el('p', { class: 'photo-modal-caption', attrs: { id: 'photo-modal-caption' } }),
+                ]),
+            ]),
+        ]);
+        document.body.appendChild(modal);
+    }
+    const image = document.getElementById('photo-modal-img');
+    image.setAttribute('src', src);
+    image.setAttribute('alt', alt);
+    document.getElementById('photo-modal-caption').textContent = details.join(' • ');
+    bootstrap.Modal.getOrCreateInstance(modal).show();
+}
 
 /* new report */
 
-async function initNewReport() {
+// onSubmitted() runs after a report is saved, so the dashboard can refresh its list.
+// defaultZoneId pre-selects the resident's own zone. Returns setZone() so the page can follow zone changes.
+async function initNewReport(onSubmitted, defaultZoneId) {
     const form = document.getElementById('report-form');
     const alertBox = document.getElementById('form-alert');
     const button = document.getElementById('submit-btn');
     const typeBox = document.getElementById('waste-type-checkboxes');
+    let selectedZone = defaultZoneId;   // the resident's zone, kept up to date by setZone()
 
     // Load zones and waste types from the API.
     try {
         const [zones, wasteTypes] = await Promise.all([apiRequest('zones'), apiRequest('waste-types')]);
         zones.zones.forEach((zone) => {
-            form.elements.zone_id.appendChild(el('option', { text: zone.zone_name, attrs: { value: String(zone.zone_id) } }));
+            form.elements.zone_id.appendChild(el('option', { text: zone.address, attrs: { value: String(zone.zone_id) } }));
         });
         wasteTypes.waste_types.forEach((type) => {
             const id = `waste-type-${type.type_id}`;
-            typeBox.appendChild(el('div', { class: 'form-check' }, [
-                el('input', { class: 'form-check-input', attrs: { type: 'checkbox', id, value: String(type.type_id) } }),
-                el('label', { class: 'form-check-label', text: type.type_name, attrs: { for: id } }),
+            typeBox.appendChild(el('span', {}, [
+                el('input', { class: 'pill-input', attrs: { type: 'checkbox', id, value: String(type.type_id) } }),
+                el('label', { class: 'pill', text: type.type_name, attrs: { for: id } }),
             ]));
         });
+        if (defaultZoneId) form.elements.zone_id.value = String(defaultZoneId);
     } catch (error) {
         showAlert(alertBox, error.message);
         return;
@@ -33,35 +68,128 @@ async function initNewReport() {
         form.elements.issue_type.appendChild(el('option', { text: label, attrs: { value } }));
     });
 
+    // Live character counter under the description.
+    const counter = document.getElementById('description-count');
+    const description = form.elements.issue_description;
+    const updateCounter = () => { if (counter) counter.textContent = `${description.value.length}/${description.maxLength}`; };
+    description.addEventListener('input', updateCounter);
+
+    // Photos: 1 is required and 2 are allowed. Each pick is added to this list, so a phone can
+    // take one photo, then another. The file input only picks; the list is what gets sent.
+    const uploadBox = document.getElementById('upload-box');
+    const uploadTitle = document.getElementById('upload-title');
+    const photoInput = form.elements.photos;
+    const photoList = document.getElementById('photo-files');
+    let chosen = [];
+
+    function renderChosen() {
+        photoList.replaceChildren(...chosen.map((file, index) => {
+            const remove = el('button', { class: 'btn-close photo-file-remove', attrs: { type: 'button', 'aria-label': `Remove ${file.name}` } });
+            remove.addEventListener('click', () => {
+                chosen.splice(index, 1);
+                renderChosen();
+            });
+            return el('li', { class: 'photo-file' }, [
+                el('i', { class: 'bi bi-image', attrs: { 'aria-hidden': 'true' } }),
+                el('span', { class: 'photo-file-name', text: file.name }),
+                el('span', { class: 'photo-file-size', text: formatFileSize(file.size) }),
+                remove,
+            ]);
+        }));
+        const full = chosen.length >= MAX_PHOTOS;
+        photoInput.disabled = full;
+        uploadBox.classList.toggle('is-full', full);
+        uploadTitle.textContent = full ? 'Maximum of 2 photos added' : (chosen.length ? 'Add another photo' : 'Upload image here');
+    }
+
+    function addPhotos(files) {
+        form.querySelector('[data-error-for="photos"]').textContent = '';
+        for (const file of files) {
+            if (chosen.length >= MAX_PHOTOS) {
+                showFieldErrors(form, { photos: `You can upload up to ${MAX_PHOTOS} photos.` });
+                break;
+            }
+            chosen.push(file);
+        }
+        renderChosen();
+    }
+
+    photoInput.addEventListener('change', () => {
+        addPhotos(Array.from(photoInput.files));
+        photoInput.value = '';   // so the same file can be picked again after removing it
+    });
+    if (uploadBox) {
+        ['dragenter', 'dragover'].forEach((name) => uploadBox.addEventListener(name, (event) => {
+            event.preventDefault();
+            uploadBox.classList.add('dragging');
+        }));
+        ['dragleave', 'drop'].forEach((name) => uploadBox.addEventListener(name, () => uploadBox.classList.remove('dragging')));
+        uploadBox.addEventListener('drop', (event) => {
+            event.preventDefault();
+            if (event.dataTransfer && event.dataTransfer.files.length > 0) {
+                addPhotos(Array.from(event.dataTransfer.files));
+            }
+        });
+    }
+
+    // The form sits in a pop-up: start each opening with no old messages.
+    const modalEl = form.closest('.modal');
+    if (modalEl) {
+        modalEl.addEventListener('show.bs.modal', () => clearFormErrors(form, alertBox));
+    }
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         clearFormErrors(form, alertBox);
 
         // Quick browser check; the server checks again because it cannot trust the browser.
-        const photo = form.elements.photo.files[0];
-        if (photo && (!PHOTO_TYPES.includes(photo.type) || photo.size > MAX_PHOTO_BYTES)) {
-            showFieldErrors(form, { photo: 'Photo must be a JPEG, PNG or WebP image of 5 MB or less.' });
+        let photoError = '';
+        if (chosen.length === 0) {
+            photoError = 'Please add at least 1 photo.';
+        } else if (chosen.some((file) => !PHOTO_TYPES.includes(file.type))) {
+            photoError = 'Photos must be JPEG, PNG or WebP images.';
+        } else if (chosen.reduce((sum, file) => sum + file.size, 0) > MAX_PHOTO_TOTAL_BYTES) {
+            photoError = 'Your photos must be 15 MB or smaller in total.';
+        }
+        if (photoError) {
+            showFieldErrors(form, { photos: photoError });
             return;
         }
 
-        // FormData can carry the photo file.
+        // FormData can carry the photo files.
         const body = new FormData();
         body.append('zone_id', form.elements.zone_id.value);
         body.append('issue_type', form.elements.issue_type.value);
         body.append('issue_description', form.elements.issue_description.value);
         typeBox.querySelectorAll('input:checked').forEach((box) => body.append('waste_type_ids[]', box.value));
-        if (photo) body.append('photo', photo);
+        chosen.forEach((file) => body.append('photos[]', file));
 
         setBusy(button, true, 'Submitting...');
         try {
             const data = await apiRequest('reports', { method: 'POST', body });
-            window.location.replace(`report.html?id=${data.report.report_id}&submitted=1`);
+            form.reset();
+            if (selectedZone) form.elements.zone_id.value = String(selectedZone);   // reset() cleared it
+            updateCounter();
+            chosen = [];
+            renderChosen();
+            const thanks = `Report #${data.report.report_id} submitted. Thank you!`;
+            if (modalEl) {
+                // Close the pop-up and show the thank-you above the "My reports" list.
+                bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                if (onSubmitted) onSubmitted();
+                showAlert(document.getElementById('report-alert'), thanks, 'success');
+            } else {
+                showAlert(alertBox, thanks, 'success');
+                if (onSubmitted) onSubmitted();
+            }
         } catch (error) {
             showAlert(alertBox, error.message);
             showFieldErrors(form, error.errors);
-            setBusy(button, false);
         }
+        setBusy(button, false);
     });
+
+    return { setZone(zoneId) { selectedZone = zoneId; form.elements.zone_id.value = String(zoneId); } };
 }
 
 /* report list */
@@ -70,14 +198,13 @@ function initReportList(isAdmin) {
     const statusFilter = document.getElementById('status-filter');
     // These exist only on the admin page, so they are checked before use.
     const zoneFilter = document.getElementById('zone-filter');
-    const dateFrom = document.getElementById('date-from');
-    const dateTo = document.getElementById('date-to');
-    const clearButton = document.getElementById('clear-filters');
 
+    // Admins see a table; residents see report cards (the container is a <div> there).
     const tbody = document.getElementById('report-body');
     const alertBox = document.getElementById('report-alert');
     const pager = document.getElementById('pagination');
     const columns = isAdmin ? 7 : 6;
+    const emptyMessage = (text) => (isAdmin ? messageRow(columns, text) : el('p', { class: 'report-empty', text }));
     let page = 1;
 
     Object.entries(STATUS_LABELS).forEach(([value, label]) => {
@@ -93,7 +220,7 @@ function initReportList(isAdmin) {
     if (zoneFilter) {
         apiRequest('zones').then((data) => {
             data.zones.forEach((zone) => {
-                zoneFilter.appendChild(el('option', { text: zone.zone_name, attrs: { value: String(zone.zone_id) } }));
+                zoneFilter.appendChild(el('option', { text: zone.address, attrs: { value: String(zone.zone_id) } }));
             });
         }).catch((error) => showAlert(alertBox, error.message));
     }
@@ -108,14 +235,13 @@ function initReportList(isAdmin) {
         const filters = {
             status: statusFilter.value,
             zone_id: zoneFilter ? zoneFilter.value : '',
-            date_from: dateFrom ? dateFrom.value : '',
-            date_to: dateTo ? dateTo.value : '',
         };
         return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== ''));
     }
 
     async function load() {
-        tbody.replaceChildren(messageRow(columns, 'Loading reports...'));
+        tbody.replaceChildren(emptyMessage('Loading reports...'));
+        await loadZoneNames();
         pager.replaceChildren();
         alertBox.classList.add('d-none');
 
@@ -127,10 +253,10 @@ function initReportList(isAdmin) {
             tbody.replaceChildren();
             if (data.reports.length === 0) {
                 const hasFilter = Object.keys(filters).length > 0;
-                tbody.appendChild(messageRow(columns, hasFilter ? 'No reports match these filters.' : 'No reports yet.'));
+                tbody.appendChild(emptyMessage(hasFilter ? 'No reports match these filters.' : 'No reports yet.'));
                 return;
             }
-            data.reports.forEach((report) => tbody.appendChild(reportRow(report, isAdmin)));
+            data.reports.forEach((report) => tbody.appendChild(isAdmin ? reportRow(report, true) : reportCard(report)));
             renderPagination(pager, data.pagination, (newPage) => { page = newPage; load(); });
         } catch (error) {
             tbody.replaceChildren();
@@ -138,17 +264,53 @@ function initReportList(isAdmin) {
         }
     }
 
-    [statusFilter, zoneFilter, dateFrom, dateTo].filter(Boolean).forEach((control) => {
+    [statusFilter, zoneFilter].filter(Boolean).forEach((control) => {
         control.addEventListener('change', () => { page = 1; load(); });
     });
-    if (clearButton) {
-        clearButton.addEventListener('click', () => {
-            [statusFilter, zoneFilter, dateFrom, dateTo].filter(Boolean).forEach((control) => { control.value = ''; });
+    load();
+
+    // Lets the dashboard refresh the list, or show one status (used by the admin tiles).
+    return {
+        reload() { page = 1; load(); },
+        showStatus(status) {
+            if (zoneFilter) { zoneFilter.value = ''; }
+            statusFilter.value = status;
             page = 1;
             load();
-        });
-    }
-    load();
+        },
+    };
+}
+
+// "November 8, 2026" and "4:11 PM" from a stored date, without time-zone shifting.
+function longDateParts(value) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(value || '');
+    if (!match) return { date: value || '', time: '' };
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return { date: `${months[Number(match[2]) - 1]} ${Number(match[3])}, ${match[1]}`, time: formatTime(`${match[4]}:${match[5]}`) };
+}
+
+// One report as a card on the resident dashboard.
+function reportCard(report) {
+    const when = longDateParts(report.date_reported);
+    const streams = report.waste_types && report.waste_types.length ? report.waste_types.join(', ') : 'Not specified';
+    return el('article', { class: 'report-item' }, [
+        el('div', { class: 'report-top' }, [
+            el('div', {}, [
+                el('p', { class: 'report-status', text: STATUS_LABELS[report.status] || report.status }),
+                el('h3', { class: 'report-title', text: ISSUE_LABELS[report.issue_type] || report.issue_type }),
+                el('p', { class: 'report-zone', text: `${fullZoneName(report.zone_name)} \u2022 Report #${report.report_id}` }),
+            ]),
+            el('div', { class: 'report-when' }, [
+                el('p', { class: 'report-date', text: when.date }),
+                el('p', { class: 'report-time', text: when.time }),
+            ]),
+        ]),
+        el('p', { class: 'report-streams' }, [document.createTextNode('Streams Reported: '), el('span', { text: streams })]),
+        el('p', { class: 'report-quote', text: `\u201C${report.issue_description}\u201D` }),
+        el('a', { class: 'report-more', text: 'View Full Report', attrs: {
+            href: `report.html?id=${report.report_id}`, 'aria-label': `View full report ${report.report_id}`,
+        } }),
+    ]);
 }
 
 function reportRow(report, isAdmin) {
@@ -163,7 +325,7 @@ function reportRow(report, isAdmin) {
     if (isAdmin) cells.push(el('td', { text: report.reporter_name }));
     cells.push(
         el('td', { text: ISSUE_LABELS[report.issue_type] || report.issue_type }),
-        el('td', { text: report.zone_name }),
+        el('td', { text: fullZoneName(report.zone_name) }),
         el('td', {}, [statusBadge(report.status)]),
         el('td', { class: 'text-end' }, [viewLink]),
     );
@@ -177,7 +339,7 @@ async function initReportDetail(user) {
     const root = document.getElementById('report-view');
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
-    const backHref = isAdmin ? 'admin-reports.html' : 'my-reports.html';
+    const backHref = isAdmin ? 'admin.html#reports' : 'resident.html#my-reports';
 
     document.getElementById('back-link').href = backHref;
 
@@ -190,6 +352,7 @@ async function initReportDetail(user) {
 
     async function load() {
         try {
+            await loadZoneNames();
             const data = await apiRequest(`reports/${id}`);
             render(data.report);
         } catch (error) {
@@ -230,17 +393,14 @@ async function initReportDetail(user) {
 
         const list = el('dl', { class: 'mb-0' }, [
             row('Issue type', el('span', { text: ISSUE_LABELS[report.issue_type] || report.issue_type })),
-            row('Zone', el('span', { text: `${report.zone.zone_name}, ${report.zone.barangay_name}` })),
+            row('Zone', el('span', { text: fullZoneName(report.zone.zone_name) })),
             row('Waste types', waste),
             row('Reported on', el('span', { text: formatDateTime(report.date_reported) })),
             row('Description', el('div', { class: 'pre-wrap', text: report.issue_description })),
         ]);
-        if (report.has_photo) {
-            const img = el('img', { class: 'report-photo', attrs: {
-                src: `${API_BASE}/reports/${report.report_id}/photo`, alt: `Photo attached to report ${report.report_id}`,
-            } });
-            const link = el('a', { attrs: { href: img.getAttribute('src'), target: '_blank', rel: 'noopener' } }, [img]);
-            list.appendChild(row('Photo', link));
+        if (report.photos.length > 0) {
+            const blocks = report.photos.map((photo, index) => photoBlock(report, photo, index + 1));
+            list.appendChild(row(report.photos.length > 1 ? 'Photos' : 'Photo', el('div', { class: 'photo-list' }, blocks)));
         }
 
         return el('section', { class: 'card mb-3' }, [el('div', { class: 'card-body' }, [
@@ -250,6 +410,34 @@ async function initReportDetail(user) {
             ]),
             list,
         ])]);
+    }
+
+    // Small thumbnail with file details; clicking it opens the large preview.
+    function photoBlock(report, photo, number) {
+        const several = report.photos.length > 1;
+        const title = several ? `Photo ${number} of ${report.photos.length}` : 'Attached photo';
+        const src = `${API_BASE}/reports/${report.report_id}/photos/${photo.photo_id}`;
+        const alt = `${title} for report ${report.report_id}`;
+        const details = [photo.type, formatFileSize(photo.size)];
+
+        const thumb = el('img', { class: 'photo-thumb', attrs: { src, alt } });
+        const button = el('button', { class: 'photo-thumb-btn', attrs: { type: 'button', 'aria-label': 'View photo larger' } }, [
+            thumb,
+            el('span', { class: 'photo-zoom', attrs: { 'aria-hidden': 'true' } }, [el('i', { class: 'bi bi-arrows-fullscreen' })]),
+        ]);
+        const meta = el('div', { class: 'photo-meta' }, [
+            el('div', { class: 'photo-meta-title', text: title }),
+            el('div', { class: 'photo-meta-details text-muted-soft small', text: details.join(' • ') }),
+        ]);
+
+        // The image size in pixels is only known once the picture has loaded.
+        thumb.addEventListener('load', () => {
+            details.push(`${thumb.naturalWidth} × ${thumb.naturalHeight} px`);
+            meta.querySelector('.photo-meta-details').textContent = details.join(' • ');
+        });
+        button.addEventListener('click', () => openPhotoViewer(src, alt, several ? [title, ...details] : details));
+
+        return el('div', { class: 'photo-block' }, [button, meta]);
     }
 
     function reporterCard(reporter) {
@@ -264,6 +452,7 @@ async function initReportDetail(user) {
         ])]);
     }
 
+    // Every status change with its date, who made it, and the remarks (residents see the remarks too).
     function historyCard(report) {
         const items = report.history.map((entry) => el('li', { class: 'list-group-item px-0' }, [
             el('div', { class: 'd-flex flex-wrap justify-content-between align-items-center gap-2' }, [

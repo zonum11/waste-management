@@ -12,7 +12,7 @@ function newResident(string $baseUrl, string $label): array
     $c->fetchCsrf();
     $c->request('POST', 'auth/register', [
         'fname' => 'Test', 'lname' => ucfirst($label), 'email' => $email,
-        'address' => '1 Test St.', 'password' => 'Secret123',
+        'address' => '1 Test St.', 'zone_id' => 1, 'password' => 'Secret123',
     ]);
     $c->login($email, 'Secret123');
     return [$c, $email];
@@ -30,8 +30,9 @@ echo "\nPermission matrix (every endpoint x every kind of visitor)\n";
 // Columns: method, path, body, then expected status for guest, resident, admin.
 $matrix = [
     ['GET',    'auth/me',               null,   401, 200, 200],
-    ['GET',    'zones',                 null,   401, 200, 200],
+    ['GET',    'zones',                 null,   200, 200, 200],
     ['GET',    'waste-types',           null,   401, 200, 200],
+    ['PUT',    'auth/profile',          ['email' => 'not-an-email'], 401, 422, 403],
     ['GET',    'schedules',             null,   401, 200, 200],
     ['POST',   'schedules',             [],     401, 403, 422],
     ['PUT',    'schedules/999999',      [],     401, 403, 404],
@@ -41,6 +42,7 @@ $matrix = [
     ['GET',    'reports/999999',        null,   401, 404, 404],
     ['PUT',    'reports/999999/status', [],     401, 403, 404],
     ['GET',    'reports/999999/photo',  null,   401, 404, 404],
+    ['GET',    'reports/999999/photos/1', null, 401, 404, 404],
     ['GET',    'dashboard',             null,   401, 403, 200],
 ];
 foreach ($matrix as [$method, $path, $body, $expectGuest, $expectResident, $expectAdmin]) {
@@ -76,7 +78,7 @@ echo "\nCannot act as someone else (mass assignment)\n";
 [$s, $j] = $resident->postForm('reports', [
     'zone_id' => 1, 'issue_type' => 'other', 'issue_description' => 'Trying to sneak extra fields in.',
     'user_id' => 1, 'current_status' => 'resolved', 'status' => 'resolved', 'role' => 'admin',
-]);
+], tinyPng());
 $id = $j['data']['report']['report_id'] ?? 0;
 check('report with extra fields is accepted (extras ignored)', $s === 201);
 check('the report is still Pending', ($j['data']['report']['status'] ?? '') === 'pending');

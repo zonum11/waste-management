@@ -4,51 +4,60 @@ const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satu
 
 /* resident */
 
-async function initResidentSchedules() {
-    const zoneFilter = document.getElementById('zone-filter');
-    const tbody = document.getElementById('schedule-body');
-    const alertBox = document.getElementById('schedule-alert');
+// The next date and time this weekly schedule happens, counting from "now".
+function nextOccurrence(schedule, now) {
+    const jsDay = (WEEK_DAYS.indexOf(schedule.collect_day) + 1) % 7;   // JavaScript counts Sunday as 0
+    const [hour, minute] = schedule.collect_time.split(':').map(Number);
+    const when = new Date(now);
+    when.setHours(hour, minute, 0, 0);
+    when.setDate(when.getDate() + ((jsDay - now.getDay() + 7) % 7));
+    if (when <= now) when.setDate(when.getDate() + 7);
+    return when;
+}
 
-    async function load() {
-        tbody.replaceChildren(messageRow(3, 'Loading schedule...'));
-        alertBox.classList.add('d-none');
-        try {
-            const query = zoneFilter.value ? `?zone_id=${encodeURIComponent(zoneFilter.value)}` : '';
-            const data = await apiRequest(`schedules${query}`);
-            tbody.replaceChildren();
-            if (data.schedules.length === 0) {
-                tbody.appendChild(messageRow(3, 'No collection schedule found.'));
-                return;
-            }
-            data.schedules.forEach((schedule) => {
-                tbody.appendChild(el('tr', {}, [
-                    el('td', { class: 'fw-semibold', text: schedule.collect_day }),
-                    el('td', { class: 'text-nowrap', text: formatTime(schedule.collect_time) }),
-                    el('td', {}, [zoneBadges(schedule.zones)]),
-                ]));
-            });
-        } catch (error) {
-            tbody.replaceChildren();
-            showAlert(alertBox, error.message);
-        }
+// Fills the "Next Pickup" banner and the weekly list with the schedule of the resident's own zone.
+async function initResidentSchedules(user) {
+    const pickupDay = document.getElementById('pickup-day');
+    const weeklyList = document.getElementById('weekly-list');
+    const alertBox = document.getElementById('schedule-alert');
+    const zoneName = document.getElementById('zone-name');
+
+    // The zone was chosen at registration and cannot be changed; the server also returns only this zone's schedules.
+    if (!user.zone) {
+        pickupDay.textContent = 'No zone saved';
+        weeklyList.replaceChildren(el('li', { text: 'Please contact the barangay office.' }));
+        return;
     }
+    zoneName.textContent = zoneLabel(user);
 
     try {
-        const data = await apiRequest('zones');
-        data.zones.forEach((zone) => {
-            zoneFilter.appendChild(el('option', { text: zone.zone_name, attrs: { value: String(zone.zone_id) } }));
-        });
+        const data = await apiRequest('schedules');
+        if (data.schedules.length === 0) {
+            pickupDay.textContent = 'No pickup yet';
+            weeklyList.replaceChildren(el('li', { text: 'No collection schedule found for your zone.' }));
+            return;
+        }
+
+        const now = new Date();
+        const next = data.schedules
+            .map((schedule) => ({ schedule, when: nextOccurrence(schedule, now) }))
+            .sort((x, y) => x.when - y.when)[0];
+        pickupDay.textContent = `${next.schedule.collect_day}, ${formatTime(next.schedule.collect_time)}`;
+
+        const byWeek = [...data.schedules].sort((x, y) =>
+            WEEK_DAYS.indexOf(x.collect_day) - WEEK_DAYS.indexOf(y.collect_day) || x.collect_time.localeCompare(y.collect_time));
+        weeklyList.replaceChildren(...byWeek.map((schedule) =>
+            el('li', { text: `${schedule.collect_day}, ${formatTime(schedule.collect_time)}` })));
     } catch (error) {
+        pickupDay.textContent = 'Unavailable';
         showAlert(alertBox, error.message);
     }
-
-    zoneFilter.addEventListener('change', load);
-    load();
 }
 
 /* admin */
 
-async function initAdminSchedules() {
+// onChange() runs after a schedule is added, edited or deleted (the dashboard refreshes its totals).
+async function initAdminSchedules(onChange) {
     const tbody = document.getElementById('schedule-body');
     const alertBox = document.getElementById('schedule-alert');
     const form = document.getElementById('schedule-form');
@@ -75,7 +84,7 @@ async function initAdminSchedules() {
             const id = `zone-${zone.zone_id}`;
             zoneBox.appendChild(el('div', { class: 'form-check' }, [
                 el('input', { class: 'form-check-input', attrs: { type: 'checkbox', id, value: String(zone.zone_id), name: 'zone' } }),
-                el('label', { class: 'form-check-label', text: zone.zone_name, attrs: { for: id } }),
+                el('label', { class: 'form-check-label', text: zone.address, attrs: { for: id } }),
             ]));
         });
     } catch (error) {
@@ -85,6 +94,7 @@ async function initAdminSchedules() {
     async function load() {
         tbody.replaceChildren(messageRow(5, 'Loading schedules...'));
         try {
+            await loadZoneNames();
             schedules = (await apiRequest('schedules')).schedules;
             render();
         } catch (error) {
@@ -96,14 +106,13 @@ async function initAdminSchedules() {
     function render() {
         tbody.replaceChildren();
         if (schedules.length === 0) {
-            tbody.appendChild(messageRow(5, 'No schedules yet. Use "Add schedule" to create one.'));
+            tbody.appendChild(messageRow(4, 'No schedules yet. Use "Add schedule" to create one.'));
             return;
         }
         schedules.forEach((schedule) => {
-            const isActive = schedule.status === 'active';
-            const editBtn = el('button', { class: 'btn btn-sm btn-outline-secondary', attrs: { type: 'button', title: 'Edit', 'aria-label': `Edit ${schedule.collect_day} schedule` } },
+            const editBtn = el('button', { class: 'btn btn-sm btn-icon btn-outline-secondary', attrs: { type: 'button', title: 'Edit', 'aria-label': `Edit ${schedule.collect_day} schedule` } },
                 [el('i', { class: 'bi bi-pencil', attrs: { 'aria-hidden': 'true' } })]);
-            const deleteBtn = el('button', { class: 'btn btn-sm btn-outline-danger', attrs: { type: 'button', title: 'Delete', 'aria-label': `Delete ${schedule.collect_day} schedule` } },
+            const deleteBtn = el('button', { class: 'btn btn-sm btn-icon btn-outline-danger', attrs: { type: 'button', title: 'Delete', 'aria-label': `Delete ${schedule.collect_day} schedule` } },
                 [el('i', { class: 'bi bi-trash', attrs: { 'aria-hidden': 'true' } })]);
             editBtn.addEventListener('click', () => openForm(schedule));
             deleteBtn.addEventListener('click', () => askDelete(schedule));
@@ -112,7 +121,6 @@ async function initAdminSchedules() {
                 el('td', { class: 'fw-semibold', text: schedule.collect_day }),
                 el('td', { class: 'text-nowrap', text: formatTime(schedule.collect_time) }),
                 el('td', {}, [zoneBadges(schedule.zones)]),
-                el('td', {}, [el('span', { class: `badge ${isActive ? 'text-bg-success' : 'text-bg-secondary'}`, text: isActive ? 'Active' : 'Inactive' })]),
                 el('td', { class: 'text-end text-nowrap' }, [editBtn, document.createTextNode(' '), deleteBtn]),
             ]));
         });
@@ -152,6 +160,7 @@ async function initAdminSchedules() {
             modal.hide();
             showAlert(alertBox, editingId === null ? 'Schedule added.' : 'Schedule updated.', 'success');
             await load();
+            if (onChange) onChange();
         } catch (error) {
             showAlert(formAlert, error.message);
             showFieldErrors(form, error.errors);
@@ -172,6 +181,7 @@ async function initAdminSchedules() {
             deleteModal.hide();
             showAlert(alertBox, 'Schedule deleted.', 'success');
             await load();
+            if (onChange) onChange();
         } catch (error) {
             deleteModal.hide();
             showAlert(alertBox, error.message);
