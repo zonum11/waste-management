@@ -27,5 +27,11 @@ function getConnection(): PDO
         throw new RuntimeException('Could not connect to the database.');
     }
 
+    // Show and save every time in Philippine time (UTC+8, no daylight saving), whatever time zone the
+    // hosting server uses. Without this, an online server in another country saves the wrong hour.
+    if (str_starts_with($dsn, 'mysql:')) {
+        $pdo->exec("SET time_zone = '+08:00'");
+    }
+
     return $pdo;
 }

@@ -15,7 +15,7 @@ const PAGE_STARTERS = {
         const reportList = initReportList(false);
         initNewReport(() => reportList.reload(), user.zone ? user.zone.zone_id : null);
         initResidentSchedules(user);
-        document.getElementById('welcome-name').textContent = user.fname;
+        document.getElementById('welcome-name').textContent = `${user.fname} ${user.lname}`;
         document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         // The menu's Profile link on other pages leads here as resident.html#profile.
         if (window.location.hash === '#profile') {

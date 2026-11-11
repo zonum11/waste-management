@@ -91,6 +91,9 @@ a { color: var(--g900); }
     min-height: 43px;
 }
 .form-control::placeholder { color: #000; opacity: 0.3; }
+/* A dropdown that still shows its "Choose ..." prompt looks like the placeholder of the other fields */
+.form-select:required:invalid { color: rgba(0, 0, 0, 0.3); }
+.form-select:required:invalid option { color: var(--g900); }
 .form-control:focus, .form-select:focus {
     background-color: var(--field);
     border-color: var(--g600);
@@ -244,7 +247,7 @@ textarea.form-control { min-height: 100px; resize: vertical; }
     padding-bottom: 24px; border-bottom: 2px solid var(--g900);
 }
 .reports-title { font-family: var(--font-head); font-weight: 700; font-size: 2rem; letter-spacing: 0.04em; margin: 0 0 4px; }
-.reports-sub { font-weight: 700; opacity: 0.6; margin: 0; }
+.reports-sub { font-weight: 700; opacity: 0.6; margin: 0 0 6px; }
 .reports-actions { display: flex; align-items: center; gap: 20px; }
 .reports-actions .form-select {
     background-color: #fff; border: 1px solid var(--g900); font-weight: 700; min-width: 163px; height: 43px; padding-top: 0; padding-bottom: 0;
@@ -320,11 +323,12 @@ body:has(.photo-modal.show) .modal-backdrop { --bs-backdrop-opacity: 0.8; }
 .admin-section-title { font-family: var(--font-head); font-weight: 700; letter-spacing: 0.04em; }
 
 /* ---------- Footer notice ---------- */
-.site-footer { margin-top: auto; padding: 24px 0 32px; text-align: center; }
+.site-footer { margin-top: auto; padding: 24px 0 32px; text-align: left; }
 .disclaimer {
-    font-family: var(--font-head); font-weight: 400; font-size: 0.875rem; line-height: 1.5;
-    opacity: 0.6; max-width: 1062px; margin: 0 auto; padding: 0 16px; color: var(--g900); text-align: center;
+    font-family: var(--font-head); font-weight: 400; font-size: 0.875rem; line-height: normal;
+    opacity: 0.6; margin: 0; padding: 0; color: var(--g900); text-align: left;
 }
+.disclaimer strong { font-weight: 400; }
 .site-footer-copy { margin: 8px 0 0; font-size: 0.8125rem; opacity: 0.6; }
 
 /* ---------- Login / Register / Forgot / Reset: split screen ---------- */
@@ -360,6 +364,13 @@ body.auth-page { display: grid; grid-template-columns: 1fr 1fr; grid-template-ro
 .auth-form-wrap .btn-brand { width: 100%; }
 .field-hint { font-size: 0.8125rem; opacity: 0.65; margin: 0 0 24px; }
 
+/* Desktop only (Figma desktop login): exact line heights for the hero text. */
+@media (min-width: 992px) {
+    .auth-hero .eyebrow { line-height: 1.4; }
+    .auth-disclaimer { line-height: normal; }
+    .auth-disclaimer strong { font-weight: 400; }
+}
+
 /* ---------- Phones: layouts follow the mobile Figma ---------- */
 @media (max-width: 991.98px) {
     body.auth-page { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
@@ -379,8 +390,7 @@ body.auth-page { display: grid; grid-template-columns: 1fr 1fr; grid-template-ro
     .user-meta { display: none; }
     .user-avatar { width: 50px; height: 50px; }
     .app-mobile-mark { display: inline-block; }
-    .user-menu { order: -1; }
-    .app-header-inner { flex-direction: row; }
+    .app-header-inner { flex-direction: row; }   /* logo on the left, profile on the right */
 
     .page-main { padding-top: 14px; padding-bottom: 16px; }
     .greeting { margin-bottom: 14px; }
@@ -408,9 +418,19 @@ body.auth-page { display: grid; grid-template-columns: 1fr 1fr; grid-template-ro
     .report-more { text-align: center; font-size: 0.875rem; padding-bottom: 12px; }
 
     .site-footer { padding: 8px 0 24px; }
-    .disclaimer { font-size: 0.75rem; text-align: left; }
+    .disclaimer { font-size: 0.625rem; text-align: left; }
     .card-body { padding: 20px 16px; }
 }
+
+/* Bigger pop-ups on desktop and tablets (phones keep the bottom sheet below) */
+@media (min-width: 576px) {
+    #report-modal .modal-dialog { max-width: 640px; }
+    #schedule-modal .modal-dialog { max-width: 600px; }
+    #profile-modal .modal-dialog, #password-modal .modal-dialog { max-width: 520px; }
+}
+
+/* "Password / Change Password" row in the Profile pop-up */
+.profile-password { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
 /* Report pop-up becomes a bottom sheet on phones */
 @media (max-width: 575.98px) {

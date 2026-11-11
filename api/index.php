@@ -15,6 +15,9 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
+// PHP's own dates (for example the password reset expiry) use the same time zone as the database.
+date_default_timezone_set('Asia/Manila');
+
 // Never print PHP errors: they would break the JSON and leak details.
 ini_set('display_errors', '0');
 
@@ -50,6 +53,7 @@ $routes = [
     ['POST',   'auth/login',     'AuthController', 'login'],
     ['POST',   'auth/logout',    'AuthController', 'logout'],
     ['PUT',    'auth/profile',   'AuthController', 'updateProfile'],
+    ['PUT',    'auth/password',  'AuthController', 'changePassword'],
     ['POST',   'auth/forgot-password', 'AuthController', 'forgotPassword'],
     ['POST',   'auth/reset-password',  'AuthController', 'resetPassword'],
 

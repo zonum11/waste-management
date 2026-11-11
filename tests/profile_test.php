@@ -1,6 +1,7 @@
 <?php
 // Tests for the Profile pop-up (name, email, phone, password). Run: php tests\profile_test.php http://localhost/waste-management/api
 require_once __DIR__ . '/TestHelpers.php';
+require_once __DIR__ . '/../api/config/database.php';
 
 $baseUrl = rtrim($argv[1] ?? 'http://localhost/waste-management/api', '/');
 echo "Profile API tests against $baseUrl\n";
@@ -106,6 +107,34 @@ $viaOld = new Client($baseUrl);
 $viaOld->fetchCsrf();
 check('login no longer works with the old password', $viaOld->login($newEmail, 'Secret123') === 401);
 
+echo "\nChange Password pop-up (PUT auth/password)\n";
+$pwEmail = "test_profile_pw_$suffix@example.com";
+$pw = makeResident($baseUrl, $pwEmail);
+[$s, $j] = $pw->request('PUT', 'auth/password', []);
+check('empty password is rejected (422)', $s === 422 && isset($j['errors']['new_password']));
+[$s, $j] = $pw->request('PUT', 'auth/password', ['new_password' => 'short1', 'confirm_password' => 'short1']);
+check('a too short password is rejected (422)', $s === 422 && isset($j['errors']['new_password']));
+[$s, $j] = $pw->request('PUT', 'auth/password', ['new_password' => 'onlyletters', 'confirm_password' => 'onlyletters']);
+check('a password without a number is rejected (422)', $s === 422 && isset($j['errors']['new_password']));
+[$s, $j] = $pw->request('PUT', 'auth/password', ['new_password' => 'Changed789']);
+check('a missing confirmation is rejected (422)', $s === 422 && isset($j['errors']['confirm_password']));
+[$s, $j] = $pw->request('PUT', 'auth/password', ['new_password' => 'Changed789', 'confirm_password' => 'Different789']);
+check('two different passwords are rejected (422)', $s === 422 && isset($j['errors']['confirm_password']));
+[$s] = $pw->request('PUT', 'auth/password', ['new_password' => 'Changed789', 'confirm_password' => 'Changed789'], false);
+check('a request without the CSRF token is refused (403)', $s === 403);
+[$s, $j] = $pw->request('PUT', 'auth/password', ['new_password' => 'Changed789', 'confirm_password' => 'Changed789']);
+check('matching strong passwords are saved (200)', $s === 200);
+[$s] = $pw->request('GET', 'auth/me');
+check('the resident stays logged in after changing the password', $s === 200);
+$fresh = new Client($baseUrl);
+$fresh->fetchCsrf();
+check('the old password no longer works', $fresh->login($pwEmail, 'Secret123') === 401);
+check('the new password works', $fresh->login($pwEmail, 'Changed789') === 200);
+$pdoCheck = getConnection();
+$hash = $pdoCheck->prepare('SELECT password_hash FROM users WHERE email = ?');
+$hash->execute([$pwEmail]);
+check('the password is stored as a hash, never as plain text', !in_array((string) $hash->fetchColumn(), ['Changed789', 'Secret123'], true));
+
 echo "\nWho may use it\n";
 $guest = new Client($baseUrl);
 $guest->fetchCsrf();
@@ -115,6 +144,10 @@ $admin = new Client($baseUrl);
 $admin->login('admin@barangay.local', 'Admin@12345');
 [$s] = $admin->request('PUT', 'auth/profile', ['email' => 'admin@barangay.local']);
 check('an admin cannot use the resident profile (403)', $s === 403);
+[$s] = $admin->request('PUT', 'auth/password', ['new_password' => 'Changed789', 'confirm_password' => 'Changed789']);
+check('an admin cannot use the resident password pop-up (403)', $s === 403);
+[$s] = $guest->request('PUT', 'auth/password', ['new_password' => 'Changed789', 'confirm_password' => 'Changed789']);
+check('a guest cannot change a password (401)', $s === 401);
 [$s, $j] = $another->request('GET', 'auth/me');
 check('another resident\'s account is untouched', ($j['data']['user']['email'] ?? '') === $other && ($j['data']['user']['address'] ?? '') === 'Barangay Pogi Zone 1, Sitio Merete');
 [$s] = $resident->request('PUT', 'auth/profile', ['email' => $newEmail], false);

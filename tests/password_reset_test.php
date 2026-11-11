@@ -2,6 +2,8 @@
 // Tests for "Forgot password?". Run: php tests\password_reset_test.php http://localhost/waste-management/api
 // The emailed token cannot be read back (only its hash is stored), so this test
 // saves a link of its own straight into the password_resets table.
+// The API saves and compares dates in Philippine time, so this test must write them the same way.
+date_default_timezone_set('Asia/Manila');
 require_once __DIR__ . '/TestHelpers.php';
 require_once __DIR__ . '/../api/config/database.php';
 

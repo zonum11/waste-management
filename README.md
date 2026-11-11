@@ -63,6 +63,10 @@ C:\xampp\mysql\bin\mysql.exe -u root < database\seed.sql
 
 **Reports now need 1 photo and can have 2 (15 MB in total).** On a database that already exists, run `database/migration_04_report_photos.sql` once (phpMyAdmin, SQL tab). It creates the `report_photos` table and copies the single photo of every older report into it, so old reports keep their photo. Running it twice is harmless. The PHP upload limits must allow 15 MB: `upload_max_filesize` at least 16M and `post_max_size` at least 20M (XAMPP already allows this; on cPanel use **MultiPHP INI Editor**). If a report with large photos fails with "The upload is too large", raise those two values.
 
+**Times are saved in Philippine time (UTC+8).** The API sets the database connection and PHP to UTC+8, so a report shows the right time even when the hosting server is in another country. Reports saved before this change keep the server's time zone. On an online database whose old times look wrong, run `database/migration_05_fix_report_times.sql` **once** to shift them (never run it twice, and skip it on a local XAMPP database whose times were already right).
+
+**Residents change their password from Profile > Change Password** (new password and confirmation, same rules as Register; saved only as a hash).
+
 ### 4. Open the system
 http://localhost/waste-management/public/login.html
 

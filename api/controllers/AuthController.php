@@ -189,6 +189,35 @@ class AuthController
         Response::success('Profile saved.', ['user' => $this->publicUser($this->users->findById((int) $user['user_id']))]);
     }
 
+    // PUT auth/password: a logged-in resident sets a new password (new_password + confirm_password).
+    // The password is checked by the same rules as on the Register page and saved only as a hash.
+    public function changePassword(): void
+    {
+        $user = Auth::requireLogin($this->pdo);
+        if ($user['role'] !== 'resident') {
+            Response::error('Only residents can change their password here.', 403);
+        }
+
+        $data = Request::jsonBody();
+        $v    = new Validator();
+
+        $newPassword     = $v->newPassword($data, 'new_password');
+        $confirmPassword = is_string($data['confirm_password'] ?? null) ? $data['confirm_password'] : '';
+        if (!isset($v->errors()['new_password']) && !hash_equals($newPassword, $confirmPassword)) {
+            $v->addError('confirm_password', 'The two passwords do not match.');
+        }
+        if ($v->hasErrors()) {
+            Response::error('Please correct the highlighted fields.', 422, $v->errors());
+        }
+
+        $userId = (int) $user['user_id'];
+        $this->users->updatePassword($userId, password_hash($newPassword, PASSWORD_DEFAULT));
+        (new PasswordResetModel($this->pdo))->deleteForUser($userId);   // an old emailed reset link stops working
+        session_regenerate_id(true);                                    // a new password starts a fresh session id
+
+        Response::success('Password changed.');
+    }
+
     // POST auth/forgot-password - emails a reset link (valid for 1 hour) to a resident.
     // The reply is always the same, so nobody can use this page to find out which emails are registered.
     public function forgotPassword(): void

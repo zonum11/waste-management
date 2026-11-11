@@ -8,6 +8,7 @@ USE waste_management;
 
 -- Drops old tables, child tables first. WARNING: development databases only.
 DROP TABLE IF EXISTS password_resets;
+DROP TABLE IF EXISTS report_photos;
 DROP TABLE IF EXISTS report_history;
 DROP TABLE IF EXISTS report_waste_types;
 DROP TABLE IF EXISTS waste_reports;
@@ -83,7 +84,7 @@ CREATE TABLE waste_reports (
     issue_type        ENUM('missed_collection', 'improper_disposal',
                            'overflowing_garbage', 'other') NOT NULL,
     issue_description TEXT NOT NULL,
-    photo             VARCHAR(255) NULL,          -- file name only, optional
+    photo             VARCHAR(255) NULL,          -- legacy: older reports only; photos now live in report_photos
     current_status    ENUM('pending', 'in_progress', 'resolved', 'rejected')
                       NOT NULL DEFAULT 'pending',
     date_reported     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -95,6 +96,19 @@ CREATE TABLE waste_reports (
         REFERENCES users (user_id) ON DELETE RESTRICT,
     CONSTRAINT fk_reports_zone FOREIGN KEY (zone_id)
         REFERENCES zones (zone_id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- report_photos: the photos of a report (1 required, 2 at most; the API enforces this)
+-- file_name is the random name of the file in the uploads folder, never the user's own file name
+CREATE TABLE report_photos (
+    photo_id   INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    report_id  INT UNSIGNED NOT NULL,
+    file_name  VARCHAR(255) NOT NULL,
+    sort_order TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    PRIMARY KEY (photo_id),
+    KEY idx_photos_report (report_id),
+    CONSTRAINT fk_photos_report FOREIGN KEY (report_id)
+        REFERENCES waste_reports (report_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- report_waste_types: links a report to its waste types
