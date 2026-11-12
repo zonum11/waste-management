@@ -96,6 +96,17 @@ function barangayOf(user) {
     return match ? match[1] : null;
 }
 
+/* Dark mode: the choice is remembered in this browser only. Light is the default. */
+function savedTheme() {
+    try { return localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'; } catch (error) { return 'light'; }
+}
+function currentTheme() { return document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light'; }
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-bs-theme', theme);
+    try { localStorage.setItem('theme', theme); } catch (error) { /* private mode: it just will not be remembered */ }
+}
+document.documentElement.setAttribute('data-bs-theme', savedTheme());
+
 // Builds the top bar: logo and barangay name on the left, the user's menu (Profile, Log out) on the right.
 function renderNavbar(user) {
     const initial = (user.fname || '?').charAt(0).toUpperCase();
@@ -139,6 +150,21 @@ function renderNavbar(user) {
         }
         items.push(el('li', {}, [profileLink]));
     }
+    const themeIcon = el('i', { class: 'bi me-2', attrs: { 'aria-hidden': 'true' } });
+    const themeLabel = document.createTextNode('');
+    const themeButton = el('button', { class: 'dropdown-item', attrs: { type: 'button', id: 'theme-btn' } }, [themeIcon, themeLabel]);
+    function showThemeButton() {
+        const dark = currentTheme() === 'dark';
+        themeIcon.className = `bi me-2 ${dark ? 'bi-sun' : 'bi-moon'}`;
+        themeLabel.textContent = dark ? 'Light mode' : 'Dark mode';
+    }
+    themeButton.addEventListener('click', () => {
+        applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+        showThemeButton();
+    });
+    showThemeButton();
+    items.push(el('li', {}, [themeButton]));
+
     const logoutButton = el('button', { class: 'dropdown-item', attrs: { type: 'button', id: 'logout-btn' } }, [
         el('i', { class: 'bi bi-box-arrow-right me-2', attrs: { 'aria-hidden': 'true' } }),
         document.createTextNode('Log out'),
