@@ -391,6 +391,8 @@ body.auth-page { display: grid; grid-template-columns: 1fr 1fr; grid-template-ro
     .user-avatar { width: 50px; height: 50px; }
     .app-mobile-mark { display: inline-block; }
     .app-header-inner { flex-direction: row; }   /* logo on the left, profile on the right */
+    .app-mobile-mark { order: 1; }
+    .user-menu { order: 2; }
 
     .page-main { padding-top: 14px; padding-bottom: 16px; }
     .greeting { margin-bottom: 14px; }
